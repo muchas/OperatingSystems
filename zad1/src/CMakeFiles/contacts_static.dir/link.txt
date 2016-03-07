@@ -1,2 +1,0 @@
-/bin/ar qc ../lib/libcontacts_static.a  CMakeFiles/contacts_static.dir/contacts.c.o
-/bin/ranlib ../lib/libcontacts_static.a

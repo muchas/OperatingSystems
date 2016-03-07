@@ -1,1 +1,0 @@
-/bin/cc  -fPIC -g  -shared -Wl,-soname,libcontacts.so -o ../lib/libcontacts.so CMakeFiles/contacts.dir/contacts.c.o 

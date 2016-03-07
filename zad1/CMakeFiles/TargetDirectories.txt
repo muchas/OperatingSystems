@@ -1,6 +1,0 @@
-/home/student/Projects/MuchaSlawomir/zad1/CMakeFiles/edit_cache.dir
-/home/student/Projects/MuchaSlawomir/zad1/CMakeFiles/rebuild_cache.dir
-/home/student/Projects/MuchaSlawomir/zad1/src/CMakeFiles/edit_cache.dir
-/home/student/Projects/MuchaSlawomir/zad1/src/CMakeFiles/rebuild_cache.dir
-/home/student/Projects/MuchaSlawomir/zad1/src/CMakeFiles/contacts.dir
-/home/student/Projects/MuchaSlawomir/zad1/src/CMakeFiles/contacts_static.dir
