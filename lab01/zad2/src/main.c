@@ -2,6 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <sys/times.h>
+#include <unistd.h>
 #include "contacts.h"
 
 typedef struct tms tms_t;
@@ -84,9 +85,13 @@ contact_t* generate_contact(char** first_names, unsigned first_names_size, char*
 
 void print_times(clock_t real, tms_t *tms_start, tms_t *tms_end)
 {
-  printf("Real time: %f\n", real / (double) CLOCKS_PER_SEC);
-  printf("User time: %f\n", (tms_end->tms_utime - tms_start->tms_utime) / (double) CLOCKS_PER_SEC );
-  printf("System time: %f\n", (tms_end->tms_stime - tms_start->tms_stime) / (double) CLOCKS_PER_SEC );
+  static long clk = 0;
+  if(clk == 0) {
+    clk = sysconf(_SC_CLK_TCK);
+  }
+  printf("Real time: %7.3fs\n", real / (double) CLOCKS_PER_SEC);
+  printf("User time: %7.3fs\n", (tms_end->tms_utime - tms_start->tms_utime) / (double) clk );
+  printf("System time: %7.3fs\n", (tms_end->tms_stime - tms_start->tms_stime) / (double) clk );
   printf("---------------------------\n");
 }
 
@@ -125,7 +130,8 @@ int main(int argc, char** argv)
     clock_start = clock();
     times(&tms_start);
     times(&tms_previous_interval);
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("1. CHECKPOINT - Beginning of the program\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
@@ -137,7 +143,8 @@ int main(int argc, char** argv)
         generated_contacts[i] = generate_contact(first_names, 18, last_names, 18);
     }
 
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("2. CHECKPOINT - 100000 contacts has been generated\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
@@ -145,13 +152,15 @@ int main(int argc, char** argv)
         add_contact(list, generated_contacts[i]);
     }
 
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("3. CHECKPOINT - 100000 contacts has been added to list\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
     sort_list(list);
 
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("4. CHECKPOINT - list has been sorted\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
@@ -161,13 +170,15 @@ int main(int argc, char** argv)
         delete_contact(list, found);
     }
 
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("5. CHECKPOINT - 300 contacts has been randomly found and deleted\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
     delete_list(list);
 
-    clock_interval = times(&tms_interval);
+    clock_interval = clock();
+    times(&tms_interval);
     printf("6. CHECKPOINT - list has been removed\n");
     run_benchmark(&clock_start, &clock_interval, &clock_previous_interval, &tms_start, &tms_interval, &tms_previous_interval);
 
