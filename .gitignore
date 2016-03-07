@@ -3,6 +3,8 @@ CMakeCache.txt
 .gdb_history
 bin/
 Release/
-cmake_install.cmake
+Testing/
+Makefile
+*.cmake
 *.a
 *.so
