@@ -1,1 +1,7 @@
 CMakeFiles/
+CMakeCache.txt
+.gdb_history
+bin/
+cmake_install.cmake
+*.a
+*.so
