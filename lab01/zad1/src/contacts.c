@@ -198,28 +198,46 @@ int compare_contacts(contact_t* first, contact_t* second)
 }
 
 
-contact_t* merge(contact_t* first, contact_t* second, contact_t* previous, int (*compare)(contact_t*, contact_t*))
+contact_t* merge(contact_t* first, contact_t* second, int (*compare)(contact_t*, contact_t*))
 {
-  contact_t* result;
+  contact_t *head, *result;
 
-  if(first == NULL) {
-    second->prev = previous;
-    return second;
-  } else if(second == NULL) {
-    first->prev = previous;
-    return first;
-  }
+  if(first == NULL) return second;
+  else if(second == NULL) return first;
 
   if(compare(first, second) < 0) {
-    result = first;
-    result->next = merge(result->next, second, result, compare);
+    head = first;
+    first = first->next;
   } else {
-    result = second;
-    result->next = merge(first, result->next, result, compare);
+    head = second;
+    second = second->next;
   }
-  result->prev = previous;
 
-  return result;
+  result = head;
+
+  while(first != NULL && second != NULL) {
+      if(compare(first, second) < 0) {
+        result->next = first;
+        first->prev = result;
+        first = first->next;
+      } else {
+         result->next = second;
+         second->prev = result;
+         second = second->next;
+      }
+      result = result->next;
+  }
+
+  if(first == NULL) {
+    result->next = second;
+    if(second != NULL) second->prev = result;
+  }
+  else {
+    result->next = first;
+    if(first != NULL) first->prev = result;
+  }
+
+  return head;
 }
 
 
@@ -232,7 +250,7 @@ contact_t* merge_sort(contact_t* head)
 
   middle = partition(head);
 
-  return merge(merge_sort(head), merge_sort(middle), NULL, compare_contacts);
+  return merge(merge_sort(head), merge_sort(middle), compare_contacts);
 }
 
 
