@@ -19,20 +19,31 @@ int lock_reg(int fd, int cmd, int type, off_t offset, int whence, off_t len)
 
 void list_locks(int fd)
 {
+    size_t length;
     struct flock lock;
+    int i;
 
     lock.l_start = 0;
+    lock.l_type = F_WRLCK;
     lock.l_whence = SEEK_SET;
     lock.l_len = 1;
 
-    while(fcntl(fd, F_GETLK, &lock) >= 0) {
+    length = lseek(fd, 0, SEEK_END) + 1;
+
+    for(i=1; i<length; i+=1) {
+        if(fcntl(fd, F_GETLK, &lock) < 0) {
+            printf("fctnl GET LOCK error\n");
+        }
+
         if(lock.l_type != F_UNLCK) {
             printf("PID: \t%d\n", lock.l_pid);
+            printf("Byte: \t%d\n", lock.l_start);
             printf("Type: \t%s\n", lock.l_type == F_WRLCK ? "write" : "read");
             printf("-----------------------\n");
-        }
+        }        
+        lock.l_start = i;
+        lock.l_type = F_WRLCK;
     }
-
 }
 
 void set_write_lock(int fd, off_t offset)
