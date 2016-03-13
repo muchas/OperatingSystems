@@ -200,8 +200,6 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    srand(time(NULL));
-
     target_filename = strdup(argv[1]);
     record_size = (size_t)atol(argv[2]);
     mode = strdup(argv[3]);
