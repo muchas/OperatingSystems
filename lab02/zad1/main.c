@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/times.h>
-#include <time.h>
 
 typedef struct tms tms_t;
 
