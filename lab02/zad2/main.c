@@ -10,7 +10,7 @@ typedef struct stat  stat_t;
 
 int check_mode(stat_t *file_stat, char *mode_pattern)
 {
-    int i, bits[9] = {S_IRUSR, S_IWUSR, S_IWUSR, S_IRGRP, S_IWGRP, S_IXGRP,
+    int i, bits[9] = {S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP,
                       S_IROTH, S_IWOTH, S_IXOTH};
 
     for(i=0; i<9; i+=1) {
