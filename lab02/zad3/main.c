@@ -4,6 +4,24 @@
 #include <fcntl.h>
 #include <string.h>
 
+int lock_test(int fd, int type, off_t offset, int whence, off_t len)
+{
+    struct flock lock;
+    lock.l_type = type;
+    lock.l_start = offset;
+    lock.l_whence = whence;
+    lock.l_len = len;
+
+    if (fcntl(fd, F_GETLK, &lock) < 0) {
+        printf("fcntl error");
+        return 0;
+    }
+    
+    if (lock.l_type == F_UNLCK)
+        return 0; 
+
+    return(lock.l_pid); 
+}
 
 int lock_reg(int fd, int cmd, int type, off_t offset, int whence, off_t len)
 {
@@ -37,10 +55,11 @@ void list_locks(int fd)
 
         if(lock.l_type != F_UNLCK) {
             printf("PID: \t%d\n", lock.l_pid);
-            printf("Byte: \t%d\n", lock.l_start);
+            printf("Byte: \t%d\n", (int) lock.l_start);
             printf("Type: \t%s\n", lock.l_type == F_WRLCK ? "write" : "read");
             printf("-----------------------\n");
-        }        
+        }
+
         lock.l_start = i;
         lock.l_type = F_WRLCK;
     }
@@ -51,7 +70,7 @@ void set_write_lock(int fd, off_t offset)
     if(lock_reg(fd, F_SETLK, F_WRLCK, offset, SEEK_SET, 1) < 0) {
         printf("write_lock error\n");
     } else {
-        printf("Byte %lld locked succesfully\n", offset);
+        printf("Byte %lld locked succesfully\n", (long long) offset);
     }
 }
 
@@ -60,7 +79,7 @@ void set_read_lock(int fd, off_t offset)
     if(lock_reg(fd, F_SETLK, F_RDLCK, offset, SEEK_SET, 1) < 0) {
         printf("read_lock error\n");
     } else {
-        printf("Byte %lld locked succesfully\n", offset);
+        printf("Byte %lld locked succesfully\n", (long long) offset);
     }
 }
 
@@ -69,7 +88,7 @@ void unlock(int fd, off_t offset)
     if(lock_reg(fd, F_SETLK, F_UNLCK, offset, SEEK_SET, 1) < 0) {
         printf("unlock error\n");
     } else {
-        printf("Byte %lld unlocked succesfully\n", offset);
+        printf("Byte %lld unlocked succesfully\n", (long long) offset);
     }
 }
 
@@ -77,6 +96,13 @@ void print_character(int fd, off_t offset)
 {
     char character;
     int read_bytes;
+
+    if(lock_test(fd, F_RDLCK, offset, SEEK_SET, 1) != 0) {
+        printf("Cannot read. Character is locked.\n");
+        return;
+    }
+
+
     lseek(fd, offset, SEEK_SET);
     read_bytes = read(fd, &character, 1);
     if(read_bytes == 1) {
@@ -89,6 +115,12 @@ void print_character(int fd, off_t offset)
 void write_character(int fd, off_t offset, char character)
 {
     int written_bytes;
+
+    if(lock_test(fd, F_WRLCK, offset, SEEK_SET, 1) != 0) {
+        printf("Cannot write. Character is locked.\n");
+        return;
+    }
+
     lseek(fd, offset, SEEK_SET);
     written_bytes = write(fd, &character, 1);
     printf("written bytes: %d and character: %c \n", written_bytes, character);
@@ -103,7 +135,7 @@ void write_character(int fd, off_t offset, char character)
 
 void run_interactive_mode(int fd)
 {
-    off_t offset;
+    long long offset;
     char cmd, character;
 
     while(1) {
