@@ -94,6 +94,7 @@ void run(char *path, char* argv[], int display, int wait, char* ext)
     exit(file_count + children_file_count);
 }
 
+
 int main(int argc, char *argv[])
 {
     char *dir, *ext;
