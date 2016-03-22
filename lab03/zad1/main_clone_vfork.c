@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <sys/times.h>
+#include <sys/mman.h>
 typedef struct tms tms_t;
 
 
@@ -50,13 +51,16 @@ int main(int argc, char** argv)
 
     N = 25000;
 
-    char * stack = malloc(STACK_SIZE);
-    char * stack_top = stack + STACK_SIZE;
+    char *stack = mmap(NULL, STACK_SIZE, PROT_WRITE|PROT_READ,MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK,-1,0);
+    char *stack_top = stack + STACK_SIZE;
 
     for(i=0; i<N; i+=1) {
         child_start = times(&tms_child);
 
-        cpid = clone(execute_child_process, stack_top, CLONE_VM | CLONE_VFORK | SIGCHLD, NULL);
+        cpid = clone(execute_child_process, (void *)stack_top, CLONE_VM | CLONE_VFORK | SIGCHLD, NULL);
+        // CLONE_VM - same memory space
+        // CLONE_VFORK - suspend parent process until child is done
+        // SIGCHLD - signal sent when child terminates
 
         if(cpid == -1) {
           printf("Clone error\n");
@@ -76,7 +80,7 @@ int main(int argc, char** argv)
     }
     printf("Counter: %d\n", counter);
 
-    free(stack);
+    munmap(stack, STACK_SIZE);
 
     end = times(&tms_end);  
     print_times(end-start, &tms_start, &tms_end);

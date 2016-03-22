@@ -6,11 +6,10 @@
 #include <sys/wait.h>
 #include <sys/times.h>
 typedef struct dirent dirent_t;
-typedef struct stat stat_t;
 
 
 const char *get_filename_ext(const char *filename) {
-    const char *dot = strrchr(filename, '.');
+    const char *dot = strrchr(filename, '.'); // first occurrence of dot
     if(!dot || dot == filename) return "";
     return dot + 1;
 }
@@ -23,6 +22,7 @@ int collect_children_file_count()
     file_count = 0;
 
     while(wait(&status) > 0) {
+        // increase count if child terminated normally (return, exit or _exit)
         if(WIFEXITED(status) && WEXITSTATUS(status) != -1) {
             file_count += WEXITSTATUS(status);
         }
@@ -38,10 +38,11 @@ void execute_child_process(char* path, char* argv[])
 
     setenv("PATH_TO_BROWSE", path, 1);
 
-    process_id = fork();
+    process_id = fork(); // child process extends: session id, current workspace, bitmask, system resource limits...
 
     if(process_id == 0) {
-        execvp(argv[0], argv);
+        // filename is looked up in PATH env var
+        execvp(argv[0], argv); // (const char* file, const char* arg, ...)
         fprintf(stderr, "exec error\n");
         _exit(0);
     } else if(process_id < 0) {
