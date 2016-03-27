@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
 
 
 static const int PRINT_BACKWARDS = 1 << 1;
 static int counter = 1;
 int flags = 0, increment_value = 1, max_num;
+
+volatile int printing = 1;
 
 
 void print(char *string, size_t length, int flags)
@@ -43,7 +45,7 @@ static void handle_sigtstp(int signo)
 static void handle_sigint(int signo)
 {
     printf("Odebrano sygnal SIGINT\n");
-    exit(EXIT_SUCCESS);
+    printing = 0;
 }
 
 
@@ -82,11 +84,12 @@ int main(int argc, char *argv[])
 
     length = strlen(string);
 
-    for(;;) {
+    while(printing) {
         for(i=0; i<counter; i+=1) {
             print(string, length, flags);
         }
         printf("\n");
+        sleep(1);
     }
 
     return 0;

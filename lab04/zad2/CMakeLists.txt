@@ -14,6 +14,6 @@ add_executable (sender_a sender_a.c)
 
 add_executable (catcher_b catcher_b.c)
 add_executable (sender_b sender_b.c)
-#
-#add_executable (catcher_c catcher_c.c)
-#add_executable (sender_c sender_c.c)
+
+add_executable (catcher_c catcher_c.c)
+add_executable (sender_c sender_c.c)
