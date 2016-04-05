@@ -50,16 +50,19 @@ int main(int argc, char *argv[])
 
     second_action.sa_sigaction = &handle_sigusr2;
     second_action.sa_flags = SA_SIGINFO;
+    sigemptyset(&second_action.sa_mask);
 
-    if(sigaction(SIGUSR2, &second_action, NULL) < 0) {
+
+    if(sigaction(SIGRTMIN+3, &second_action, NULL) < 0) {
         fputs("An error occured while setting SIGUSR2 signal handler.\n", stderr);
         return EXIT_FAILURE;
     }
 
     first_action.sa_sigaction = &handle_sigusr1;
     first_action.sa_flags = SA_SIGINFO;
+    sigemptyset(&first_action.sa_mask);
 
-    if(sigaction(SIGUSR1, &first_action, NULL) < 0) {
+    if(sigaction(SIGRTMIN+1, &first_action, NULL) < 0) {
         fputs("An error occured while setting SIGUSR1 signal handler.\n", stderr);
         return EXIT_FAILURE;
     }
@@ -70,8 +73,8 @@ int main(int argc, char *argv[])
 
     printf("Koncze transmisje, wysylam sygnaly do sendera\n");
 
-    send_signals(sender_pid, received_signals, SIGUSR1);
-    send_signals(sender_pid, 1, SIGUSR2);
+    send_signals(sender_pid, received_signals, SIGRTMIN+1);
+    send_signals(sender_pid, 1, SIGRTMIN+3);
 
     return 0;
 }

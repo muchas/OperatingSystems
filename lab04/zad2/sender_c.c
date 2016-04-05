@@ -43,18 +43,18 @@ int main(int argc, char *argv[])
     catcher_pid = (int) atol(argv[2]);
 
 
-    if(signal(SIGUSR2, handle_sigusr2) == SIG_ERR) {
+    if(signal(SIGRTMIN+3, handle_sigusr2) == SIG_ERR) {
         fputs("An error occured while setting SIGUSR2 signal handler.\n", stderr);
         return EXIT_FAILURE;
     }
 
-    if(signal(SIGUSR1, handle_sigusr1) == SIG_ERR) {
+    if(signal(SIGRTMIN+1, handle_sigusr1) == SIG_ERR) {
         fputs("An error occured while setting SIGUSR1 signal handler.\n", stderr);
         return EXIT_FAILURE;
     }
 
-    send_signals(catcher_pid, signals_number, SIGUSR1);
-    send_signals(catcher_pid, 1, SIGUSR2);
+    send_signals(catcher_pid, signals_number, SIGRTMIN+1);
+    send_signals(catcher_pid, 1, SIGRTMIN+3);
 
     while(receiving) {
         pause();
