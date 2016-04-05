@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 volatile sig_atomic_t received_signals = 0;
 volatile sig_atomic_t receiving = 1;
@@ -8,13 +9,13 @@ volatile sig_atomic_t receiving = 1;
 
 static void handle_sigusr1(int signo)
 {
-    printf("Odebralem sigusr1\n");
+    //printf("Odebralem sigusr1\n");
     received_signals += 1;
 }
 
 static void handle_sigusr2(int signo)
 {
-    printf("Odebralem sigusr2\n");
+    //printf("Odebralem sigusr2\n");
     receiving = 0;
 }
 
