@@ -8,11 +8,13 @@ volatile sig_atomic_t receiving = 1;
 
 static void handle_sigusr1(int signo)
 {
+    printf("Odebralem sigusr1\n");
     received_signals += 1;
 }
 
 static void handle_sigusr2(int signo)
 {
+    printf("Odebralem sigusr2\n");
     receiving = 0;
 }
 
