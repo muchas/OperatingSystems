@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <limits.h>
 #define BUF_SIZE 120
 #define PIPE_OUT 0
 #define PIPE_IN 1
@@ -10,23 +10,26 @@
 
 void fold(unsigned N)
 {
-    char *buffer = malloc(sizeof(char)*N);
-    int n;
+    char buffer[BUF_SIZE];
+    int i, word_length;
 
-    if(buffer == NULL){
-        perror("Failed to allocate buffer");
-        exit(1);
-    }
+    word_length = 0;
 
-    while(fgets(buffer, N, stdin)) {
-        fputs(buffer, stdout);
-        n = strlen(buffer);
-        if(n == N && buffer[n-1] != '\n') {
-            fputc('\n', stdout);
+    while(fgets(buffer, BUF_SIZE, stdin)) {
+        for(i=0; i<strlen(buffer); i+=1) {
+            if(buffer[i] == '\n') {
+                word_length = 0;
+            }
+
+            if(word_length > N) {
+                fputc('\n', stdout);
+                word_length = 0;
+            }
+
+            fputc(buffer[i], stdout);
+            word_length += 1;
         }
     }
-
-    free(buffer);
 }
 
 
@@ -36,7 +39,7 @@ void convert_uppercase()
     int i;
 
     while(fgets(buffer, BUF_SIZE, stdin)) {
-        for(i = 0; i < strlen(buffer); i+=1) {
+        for(i=0; i<strlen(buffer); i+=1) {
             buffer[i] = toupper(buffer[i]);
         }
         fputs(buffer, stdout);
@@ -50,15 +53,31 @@ void replace_file_descriptor(int fd, int target)
     if(dup2(fd, target) != target) {
         printf("Dup2 error\n");
         exit(EXIT_FAILURE);
-    };
+    }
     close(fd);
+}
+
+
+int parse_int(char* arg){
+    char* error;
+    long num = strtol(arg, &error, 10);
+    if(strlen(error)) {
+        fprintf(stderr, "Argument %s is not number.\n", arg);
+        exit(EXIT_FAILURE);
+    }
+    if(num >= INT_MAX){
+        fprintf(stderr, "Argument %s has exceeded integer limit.\n", arg);
+        exit(EXIT_FAILURE);
+    }
+    return (int)num;
 }
 
 
 void handle_pipe(unsigned N)
 {
     int fd[2];
-    pid_t pid;
+    pid_t pid, result;
+    int status;
 
     if(pipe(fd) < 0) {
         printf("Pipe error\n");
@@ -87,11 +106,11 @@ int main(int argc, char* argv[])
     int N;
 
     if(argc != 2) {
-        printf("Invalid number of arguments\n");
+        printf("Invalid number of arguments. Usage: <N>\n");
         return EXIT_FAILURE;
     }
 
-    N = atoi(argv[1]);
+    N = parse_int(argv[1]);
 
     handle_pipe(N);
 
