@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 volatile sig_atomic_t received_signals = 0;
 volatile sig_atomic_t receiving = 1;

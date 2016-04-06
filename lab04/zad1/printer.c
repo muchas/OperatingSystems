@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
     while(printing) {
         for(i=0; i<counter; i+=1) {
-            print(string, length, flags);
+             print(string, length, flags);
         }
         printf("\n");
         sleep(1);

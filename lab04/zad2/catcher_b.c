@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 volatile sig_atomic_t received_signals = 0;
 volatile sig_atomic_t receiving = 1;
@@ -23,7 +24,7 @@ static void handle_sigusr1(int sig, siginfo_t* info, void* context)
         sender_pid = info->si_pid;
     }
 
-    printf("Odebralem SIGUSR1\n");
+    //printf("Odebralem SIGUSR1\n");
 
     received_signals += 1;
 
@@ -37,7 +38,7 @@ static void handle_sigusr2(int sig, siginfo_t* info, void* context)
         sender_pid = info->si_pid;
     }
 
-    printf("Odebralem SIGUSR2\n");
+    //printf("Odebralem SIGUSR2\n");
 
     receiving = 0;
 }
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
         pause();
     }
 
-    printf("Koncze transmisje, wysylam sygnal SIGUSR2 do sendera\n");
+    //printf("Koncze transmisje, wysylam sygnal SIGUSR2 do sendera\n");
 
     send_signal(sender_pid, SIGUSR2);
 
