@@ -77,7 +77,6 @@ void handle_pipe(unsigned N)
 {
     int fd[2];
     pid_t pid, result;
-    int status;
 
     if(pipe(fd) < 0) {
         printf("Pipe error\n");

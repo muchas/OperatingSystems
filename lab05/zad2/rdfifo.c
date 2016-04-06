@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     while(1) {
         read_bytes = read(client_handler, buffer, BUF_SIZE);
 
-        if(strcmp(buffer, "") != 0) {
+        if(read_bytes > 0) {
             display_message(buffer);
         }
 
