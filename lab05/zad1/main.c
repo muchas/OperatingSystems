@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <limits.h>
-#include <cctype.h>
+#include <ctype.h>
 #define BUF_SIZE 120
 #define PIPE_OUT 0
 #define PIPE_IN 1
