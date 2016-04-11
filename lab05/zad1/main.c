@@ -22,7 +22,7 @@ void fold(unsigned N)
                 word_length = 0;
             }
 
-            if(word_length > N) {
+            if(word_length >= N) {
                 fputc('\n', stdout);
                 word_length = 0;
             }
