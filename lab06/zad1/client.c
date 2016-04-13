@@ -19,18 +19,15 @@ extern int errno;
 
 int is_prime(int number)
 {
-    int root, div;
+    int limit, i;
 
-    if(number == 1 || number % 2 == 0 || number % 3 == 0) return 0;
+    if(number <= 1 || number % 2 == 0) return 0;
 
-    root = (int)sqrt((double) number) + 1;
-    div = 5;
+    limit = floor(sqrt(number));
 
-    while(div <= root) {
-        if(number % div == 0) return 0;
-        div += 6;
+    for(i = 3; i < limit; i += 2) {
+        if(number % i == 0) return 0;
     }
-
     return 1;
 }
 

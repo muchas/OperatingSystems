@@ -18,6 +18,7 @@ static int client_queues[MAX_CLIENT_LIMIT];
 static int new_client_id = 0;
 
 
+
 // assign id and open queue for a new client
 void open_client_connection(int32_t queue_id)
 {
