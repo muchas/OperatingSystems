@@ -2,56 +2,99 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#include <math.h>
+#include <errno.h>
 #include <time.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "messages.h"
+
+
+extern int errno;
 
 
 int is_prime(int number)
 {
+    int root, div;
+
+    if(number == 1 || number % 2 == 0 || number % 3 == 0) return 0;
+
+    root = (int)sqrt((double) number) + 1;
+    div = 5;
+
+    while(div <= root) {
+        if(number % div == 0) return 0;
+        div += 6;
+    }
+
     return 1;
 }
 
 
-void open_server_connection(int server_queue_id, key_t client_key)
+int open_server_connection(int server_queue_id, int client_queue_id)
 {
     message_t msg;
 
-    msg.type = NEW_CLIENT;
-    msg.client_id = (int32_t) client_key;
+    msg.mtype = NEW_CLIENT;
+    msg.client_id = (int32_t) client_queue_id;
+
+    printf("Server queue id: %d\nClient queue id: %d\nMsg size: %d\n", server_queue_id, client_queue_id, sizeof(message_t) - sizeof(long int));
 
     if(msgsnd(server_queue_id, &msg, MESSAGE_SIZE, 0) < 0) {
-        printf("Cannot open client connection. Msgsnd error\n");
+        fprintf(stderr, "Cannot open client connection, msgsnd: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    if(msgrcv(client_queue_id, &msg, MESSAGE_SIZE, SERVER_ACCEPTANCE, 0) < 0) {
+        fprintf(stderr, "Cannot open client connection, msgrcv: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    return msg.client_id;
+}
+
+void send_ready_status(int client_id, int server_queue_id)
+{
+    message_t msg;
+
+    msg.mtype = CLIENT_READY;
+    msg.client_id = client_id;
+
+    if(msgsnd(server_queue_id, &msg, MESSAGE_SIZE, 0) < 0) {
+        fprintf(stderr, "Cannot send ready status, msgsnd: %s\n", strerror(errno));
     }
 }
 
 
-void route_received_messages(int queue_id)
+void send_response(int client_id, int number, int server_queue_id)
 {
-    int client_id;
     message_t msg;
-    message_type_t type;
-    key_t client_key;
 
-    while(msgrcv(queue_id, &msg, MESSAGE_SIZE, 0, 0) >= 0) {
+    msg.mtype = CLIENT_RESPONSE;
+    msg.number = number;
+    msg.is_prime = is_prime(number);
+    msg.client_id = client_id;
 
-        type = (message_type_t) msg.type;
+    if(msgsnd(server_queue_id, &msg, MESSAGE_SIZE, 0) < 0) {
+        fprintf(stderr, "Cannot send response, msgsnd: %s\n", strerror(errno));
+    }
+}
 
-        switch(type) {
-            case SERVER_ACCEPTANCE:
-                client_key = (key_t) msg.client_id; // using client_id field as client_key in this type of msg
-                open_client_connection(client_key);
-                break;
-            case SERVER_RESPONSE:
-                client_id = msg.client_id;
-                send_random_number(client_id);
-                break;
-            default:
-                printf("Received unknown message type %d\n", type);
-        }
+
+void route_received_messages(int client_id, int queue_id, int server_queue_id)
+{
+    message_t msg;
+
+    send_ready_status(client_id, server_queue_id);
+
+    while(msgrcv(queue_id, &msg, MESSAGE_SIZE, SERVER_RESPONSE, 0) >= 0) {
+        send_response(client_id, msg.number, server_queue_id);
+        sleep(3);
+        send_ready_status(client_id, server_queue_id);
     }
 }
 
@@ -74,7 +117,7 @@ int parse_int(char* arg){
 int main(int argc, char* argv[])
 {
     char* pathname;
-    int server_id, server_queue_id;
+    int server_id, server_queue_id, client_queue_id, client_id;
     key_t server_key;
 
     if(argc != 3) {
@@ -85,7 +128,7 @@ int main(int argc, char* argv[])
     pathname = strdup(argv[1]);
 
     if(pathname == NULL) {
-        printf("Invalid string");
+        fprintf(stderr, "strdup: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -93,20 +136,20 @@ int main(int argc, char* argv[])
     server_key = ftok(pathname, server_id);
 
     if(server_key < 0) {
-        printf("Ftok error\n");
+        fprintf(stderr, "ftok: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
-    server_queue_id = msgget(server_key, 0);
+    server_queue_id = msgget(server_key, S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    client_queue_id = msgget(IPC_PRIVATE, S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-    if(server_queue_id < 0) {
-        printf("Msgget error\n");
+    if(server_queue_id < 0 || client_queue_id < 0) {
+        fprintf(stderr, "msgget: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL));
-
-    route_received_messages(queue_id);
+    client_id = open_server_connection(server_queue_id, client_queue_id);
+    route_received_messages(client_id, client_queue_id, server_queue_id);
 
     return 0;
 }

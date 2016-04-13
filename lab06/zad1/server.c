@@ -3,20 +3,24 @@
 #include <unistd.h>
 #include <limits.h>
 #include <time.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "messages.h"
+
+extern int errno;
 
 static int client_queues[MAX_CLIENT_LIMIT];
 static int new_client_id = 0;
 
 
 // assign id and open queue for a new client
-void open_client_connection(key_t client_key)
+void open_client_connection(int32_t queue_id)
 {
-    int queue_id;
     message_t msg;
 
     if(new_client_id >= MAX_CLIENT_LIMIT) {
@@ -24,16 +28,9 @@ void open_client_connection(key_t client_key)
         return;
     }
 
-    queue_id = msgget(client_key, 0);
-
-    if(queue_id < 0) {
-        printf("Cannot open client connection. Msgget error\n");
-        return;
-    }
-
     client_queues[new_client_id] = queue_id;
 
-    msg.type = SERVER_ACCEPTANCE;
+    msg.mtype = SERVER_ACCEPTANCE;
     msg.client_id = new_client_id;
 
     if(msgsnd(queue_id, &msg, MESSAGE_SIZE, 0) < 0) {
@@ -53,10 +50,11 @@ void send_random_number(int client_id)
         return;
     }
 
+    msg.mtype = SERVER_RESPONSE;
     msg.number = rand() % 1000;
 
     if(msgsnd(client_queues[client_id], &msg, MESSAGE_SIZE, 0) < 0) {
-        printf("Cannot send random number. Msgsnd error\n");
+        fprintf(stderr, "Cannot send random number, msgsnd: %s\n", strerror(errno));
     }
 }
 
@@ -76,11 +74,12 @@ void route_received_messages(int queue_id)
 
     while(msgrcv(queue_id, &msg, MESSAGE_SIZE, 0, 0) >= 0) {
 
-        type = (message_type_t) msg.type;
+        type = (message_type_t) msg.mtype;
 
         switch(type) {
             case NEW_CLIENT:
-                open_client_connection((key_t) msg.client_id); // using client_id field as client_key in this type of msg
+                printf("New client, his queue id: %d\n", msg.client_id);
+                open_client_connection(msg.client_id); // using client_id as client_queue_id
                 break;
             case CLIENT_READY:
                 send_random_number(msg.client_id);
@@ -92,6 +91,8 @@ void route_received_messages(int queue_id)
                 printf("Received unknown message type %d\n", type);
         }
     }
+
+    fprintf(stderr, "msgrcv: %s\n", strerror(errno));
 }
 
 
@@ -136,10 +137,12 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    queue_id = msgget(server_key, IPC_CREAT);
+    printf("Server key: %d\n", (int) server_key);
+
+    queue_id = msgget(server_key, IPC_CREAT | S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
     if(queue_id < 0) {
-        printf("Msgget error\n");
+        fprintf(stderr, "msgget: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 

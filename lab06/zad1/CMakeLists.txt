@@ -11,3 +11,4 @@ enable_testing()
 
 add_executable (client client.c)
 add_executable (server server.c)
+target_link_libraries (client LINK_PUBLIC m)
