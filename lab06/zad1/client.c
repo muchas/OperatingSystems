@@ -90,11 +90,20 @@ void route_received_messages(int client_id, int queue_id, int server_queue_id)
 
     while(msgrcv(queue_id, &msg, MESSAGE_SIZE, SERVER_RESPONSE, 0) >= 0) {
         send_response(client_id, msg.number, server_queue_id);
-        sleep(3);
+        sleep(1);
         send_ready_status(client_id, server_queue_id);
     }
 }
 
+void close_message_queue()
+{
+    if(msgctl(queue_id, IPC_RMID, 0) == -1){
+        fprintf(stderr, "msgctl: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    exit(EXIT_SUCCESS);
+}
 
 int parse_int(char* arg){
     char* error;
@@ -139,6 +148,8 @@ int main(int argc, char* argv[])
 
     server_queue_id = msgget(server_key, S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     client_queue_id = msgget(IPC_PRIVATE, S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+
+    atexit(close_message_queue);
 
     if(server_queue_id < 0 || client_queue_id < 0) {
         fprintf(stderr, "msgget: %s\n", strerror(errno));

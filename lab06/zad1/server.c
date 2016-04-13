@@ -16,10 +16,10 @@ extern int errno;
 
 static int client_queues[MAX_CLIENT_LIMIT];
 static int new_client_id = 0;
+static int queue_id;
 
 
 
-// assign id and open queue for a new client
 void open_client_connection(int32_t queue_id)
 {
     message_t msg;
@@ -42,6 +42,17 @@ void open_client_connection(int32_t queue_id)
 }
 
 
+void close_message_queue()
+{
+    if(msgctl(queue_id, IPC_RMID, 0) == -1){
+        fprintf(stderr, "msgctl: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    exit(EXIT_SUCCESS);
+}
+
+
 void send_random_number(int client_id)
 {
     message_t msg;
@@ -52,7 +63,7 @@ void send_random_number(int client_id)
     }
 
     msg.mtype = SERVER_RESPONSE;
-    msg.number = rand() % 1000;
+    msg.number = (rand() % 1000) + 1;
 
     if(msgsnd(client_queues[client_id], &msg, MESSAGE_SIZE, 0) < 0) {
         fprintf(stderr, "Cannot send random number, msgsnd: %s\n", strerror(errno));
@@ -115,7 +126,7 @@ int parse_int(char* arg){
 int main(int argc, char* argv[])
 {
     char* pathname;
-    int server_id, queue_id;
+    int server_id;
     key_t server_key;
 
     if(argc != 3) {
@@ -126,7 +137,7 @@ int main(int argc, char* argv[])
     pathname = strdup(argv[1]);
 
     if(pathname == NULL) {
-        printf("Invalid string");
+        printf("strdup: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -134,13 +145,15 @@ int main(int argc, char* argv[])
     server_key = ftok(pathname, server_id);
 
     if(server_key < 0) {
-        printf("Ftok error\n");
+        fprintf(stderr, "ftok: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     printf("Server key: %d\n", (int) server_key);
 
     queue_id = msgget(server_key, IPC_CREAT | S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+
+    atexit(close_message_queue);
 
     if(queue_id < 0) {
         fprintf(stderr, "msgget: %s\n", strerror(errno));
