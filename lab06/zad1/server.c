@@ -9,6 +9,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <fcntl.h>
 #include "messages.h"
 
@@ -153,7 +154,7 @@ int main(int argc, char* argv[])
 
     queue_id = msgget(server_key, IPC_CREAT | S_IWUSR| S_IRUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-    atexit(close_message_queue);
+    signal(SIGINT, close_message_queue);
 
     if(queue_id < 0) {
         fprintf(stderr, "msgget: %s\n", strerror(errno));
