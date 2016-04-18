@@ -154,7 +154,7 @@ void generate_queue_name(char *buffer, int length)
 
 int main(int argc, char* argv[])
 {
-    char client_queue_name[MAX_QUEUE_NAME_LENGTH], *server_queue_name;
+    char *server_queue_name;
     struct mq_attr attr;
 
 
