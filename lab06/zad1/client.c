@@ -4,19 +4,16 @@
 #include <limits.h>
 #include <math.h>
 #include <errno.h>
-#include <time.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/stat.h>
 #include <signal.h>
-#include <fcntl.h>
 #include "messages.h"
 
 
 extern int errno;
-static int server_queue_id;
+static int client_queue_id;
 
 
 int is_prime(int number)
@@ -41,7 +38,7 @@ int open_server_connection(int server_queue_id, int client_queue_id)
     msg.mtype = NEW_CLIENT;
     msg.client_id = (int32_t) client_queue_id;
 
-    printf("Server queue id: %d\nClient queue id: %d\nMsg size: %d\n", server_queue_id, client_queue_id, sizeof(message_t) - sizeof(long int));
+    printf("Server queue id: %d\nClient queue id: %d\nMsg size: %d\n", server_queue_id, client_queue_id, MESSAGE_SIZE);
 
     if(msgsnd(server_queue_id, &msg, MESSAGE_SIZE, 0) < 0) {
         fprintf(stderr, "Cannot open client connection, msgsnd: %s\n", strerror(errno));
@@ -97,9 +94,9 @@ void route_received_messages(int client_id, int queue_id, int server_queue_id)
     }
 }
 
-void close_message_queue()
+void close_message_queue(int signal)
 {
-    if(msgctl(server_queue_id, IPC_RMID, 0) == -1){
+    if(msgctl(client_queue_id, IPC_RMID, 0) == -1){
         fprintf(stderr, "msgctl: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -125,7 +122,7 @@ int parse_int(char* arg){
 int main(int argc, char* argv[])
 {
     char* pathname;
-    int server_id, client_queue_id, client_id;
+    int server_id, server_queue_id, client_id;
     key_t server_key;
 
     if(argc != 3) {
