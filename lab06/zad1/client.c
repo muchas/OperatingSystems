@@ -16,6 +16,7 @@
 
 
 extern int errno;
+static int server_queue_id;
 
 
 int is_prime(int number)
@@ -98,7 +99,7 @@ void route_received_messages(int client_id, int queue_id, int server_queue_id)
 
 void close_message_queue()
 {
-    if(msgctl(queue_id, IPC_RMID, 0) == -1){
+    if(msgctl(server_queue_id, IPC_RMID, 0) == -1){
         fprintf(stderr, "msgctl: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -124,7 +125,7 @@ int parse_int(char* arg){
 int main(int argc, char* argv[])
 {
     char* pathname;
-    int server_id, server_queue_id, client_queue_id, client_id;
+    int server_id, client_queue_id, client_id;
     key_t server_key;
 
     if(argc != 3) {
