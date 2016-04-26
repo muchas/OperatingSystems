@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+#include <sys/sem.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "utils.h"
 
 
