@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #define RECORD_SIZE 1024
 #define BUFFER_SIZE (RECORD_SIZE-sizeof(int))
 
@@ -88,7 +89,7 @@ void *read_records(void *parameters)
         pthread_testcancel();
 
         if((id = find_record(read_bytes/RECORD_SIZE, p->phrase)) != -1) {
-            printf("TID: %lld Record id: %d\n", (long long) pthread_self(), id);
+            printf("TID: %ld Record id: %d\n", syscall(SYS_gettid), id);
             cancel_threads(pthread_self());
             break;
         }
