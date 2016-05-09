@@ -31,7 +31,7 @@ void put_numbers(int *memory)
 }
 
 
-void write(int *memory, sem_t *semaphore_fd)
+void write_to_array(int *memory, sem_t *semaphore_fd)
 {
     while(1) {
         acquire_semaphore(semaphore_fd);
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     memory = get_shared_memory(argv[1], PROT_READ | PROT_WRITE);
     semaphore_fd = get_semaphore(WRITER_SEMAPHORE_NAME);
 
-    write(memory, semaphore_fd);
+    write_to_array(memory, semaphore_fd);
 
     sem_close(semaphore_fd);
 
