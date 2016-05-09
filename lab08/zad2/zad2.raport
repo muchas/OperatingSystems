@@ -1,0 +1,38 @@
+Zadanie A
+
+1.
+a) SIGUSR1 - komunikat "User defined signal 1", wszystkie wątki zabite
+b) SIGTERM - komunikat "Terminated", wszystkie wątki zabite
+c) SIGKILL - komunikat "Killed", wszystkie wątki zabite
+d) SIGSTOP - komunikat "[1]+ Stopped   ./Release/main_a_1 10 19", proces i wszystkie wątki zostały zastopowane (STAT: Tl)
+2.
+a) SIGUSR1 - brak reakcji, wszystkie wątki nadal kontynuują swoją pracę (STAT: Rl+)
+b) SIGTERM - brak reakcji, wszystkie wątki nadal kontynuują swoją pracę (STAT: Rl+)
+c) SIGKILL jest niemaskowalny
+d) SIGSTOP jest niemaskowalny
+3.
+a) SIGUSR1 - komunikat "TID: 14151 PID: 14151", wszystkie wątki nadal pracują
+b) SIGTERM - komunikat "TID: 14266 PID: 14266", wszystkie wątki nadal pracują
+c) SIGKILL - nie może być złapany
+d) SIGSTOP - nie może być złapany
+4.
+a) SIGUSR1 - brak reakcji, wątki nadal pracują
+b) SIGTERM - brak reakcji, wątki nadal pracują
+c) SIGKILL jest niemaskowalny
+d) SIGSTOP jest niemaskowalny
+5.
+a) SIGUSR1 - komunikat "TID: 5481 PID: 5480", wszystkie wątki nadal pracują
+b) SIGTERM - komunikat "TID: 5517 PID: 5516", wszystkie wątki nadal pracują
+c) SIGKILL - nie może być złapany
+d) SIGSTOP - nie może być złapany
+
+
+Zadanie B
+Komunikat: "Floating point exception (core dumped)"
+
+Wszystkie wątki wraz z procesem głównym zostają zabite.
+
+
+Linux 3.13.0-55-generic #92-Ubuntu SMP Sun Jun 18:33:09 UTC 2015 i686 i686 i686 GNU/Linux
+Architecture: i686
+CPU op-mode(s): 32-bit, 64-bit

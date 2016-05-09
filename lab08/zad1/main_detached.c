@@ -32,6 +32,7 @@ typedef union Record {
 
 
 static int threads_number;
+static int active_threads;
 static pthread_t *thread_ids;
 static pthread_key_t thread_buffer_key;
 
@@ -69,6 +70,7 @@ void *read_records(void *parameters)
     size_t read_bytes, buffer_size;
 
     p = (thread_args_t *) parameters;
+
     buffer_size = RECORD_SIZE*p->records_number;
     buffer = (char *) malloc(sizeof(char)*buffer_size);
 
@@ -86,6 +88,8 @@ void *read_records(void *parameters)
     if(read_bytes == -1) {
         perror("Could not read the file");
     }
+
+    active_threads -= 1;
 
     return NULL;
 }
@@ -109,7 +113,12 @@ void run_threads(int number, int fd, int records_number, char *phrase)
     pthread_key_create(&thread_buffer_key, close_thread_buffer);
 
     for(i=0; i<number; i+=1) {
+        active_threads += 1;
         pthread_create(&thread_ids[i], &attributes, read_records, &args);
+    }
+
+    while(active_threads > 0) {
+        sleep(1);
     }
 
     pthread_attr_destroy(&attributes);
