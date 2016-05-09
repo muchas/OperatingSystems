@@ -29,7 +29,7 @@ void find_number(int number, int *memory)
 }
 
 
-void read(int number, int *memory, sem_t* mutex_fd, sem_t* writer_semaphore_fd)
+void read_array(int number, int *memory, sem_t* mutex_fd, sem_t* writer_semaphore_fd)
 {
     while(1) {
         acquire_semaphore(mutex_fd);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     mutex_fd = get_semaphore(READER_MUTEX_NAME);
     writer_semaphore_fd = get_semaphore(WRITER_SEMAPHORE_NAME);
 
-    read(number, memory, mutex_fd, writer_semaphore_fd);
+    read_array(number, memory, mutex_fd, writer_semaphore_fd);
 
     sem_close(mutex_fd);
     sem_close(writer_semaphore_fd);
