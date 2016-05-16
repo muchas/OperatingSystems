@@ -82,9 +82,9 @@ void request_start(int airplane_id)
     if(!is_airstrip_available) {
         waiting_to_start += 1;
         cond_wait(&starting, &monitor_mutex);
+        waiting_to_start -= 1;
     }
     is_airstrip_available = false;
-    waiting_to_start -= 1;
 
     printf("Airplane %d is allowed to start\n", airplane_id);
 
@@ -182,6 +182,8 @@ void run_aircraft(int airplanes_number)
 
     thread_ids = malloc(sizeof(pthread_t)*airplanes_number);
     args = malloc(sizeof(thread_args_t)*airplanes_number);
+
+    docked_airplanes = airplanes_number;
 
     for(i=0; i<airplanes_number; i+=1) {
         args[i].airplane_id = i+1;
