@@ -115,9 +115,9 @@ void request_landing(int airplane_id)
     if(!is_airstrip_available || docked_airplanes == aircraft_limit) {
         waiting_to_land += 1;
         cond_wait(&landing, &monitor_mutex);
+        waiting_to_land -= 1;
     }
     is_airstrip_available = false;
-    waiting_to_land -= 1;
 
     printf("Airplane %d is allowed to land\n", airplane_id);
 
