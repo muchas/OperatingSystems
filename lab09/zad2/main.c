@@ -79,7 +79,7 @@ void request_start(int airplane_id)
 
     printf("Airplane %d requests start\n", airplane_id);
 
-    if(!is_airstrip_available) {
+    while(!is_airstrip_available) {
         waiting_to_start += 1;
         cond_wait(&starting, &monitor_mutex);
         waiting_to_start -= 1;
@@ -112,7 +112,7 @@ void request_landing(int airplane_id)
 
     printf("Airplane %d requests landing\n", airplane_id);
 
-    if(!is_airstrip_available || docked_airplanes == aircraft_limit) {
+    while(!is_airstrip_available || docked_airplanes == aircraft_limit) {
         waiting_to_land += 1;
         cond_wait(&landing, &monitor_mutex);
         waiting_to_land -= 1;
@@ -161,12 +161,12 @@ void *run_airplane(void *parameters)
     airplane_id = args->airplane_id;
 
     while(1) {
-        request_start(airplane_id);
-        start(airplane_id);
-        fly(airplane_id);
         request_landing(airplane_id);
         land(airplane_id);
         stop(airplane_id);
+        request_start(airplane_id);
+        start(airplane_id);
+        fly(airplane_id);
     }
 
     return NULL;
@@ -182,8 +182,6 @@ void run_aircraft(int airplanes_number)
 
     thread_ids = malloc(sizeof(pthread_t)*airplanes_number);
     args = malloc(sizeof(thread_args_t)*airplanes_number);
-
-    docked_airplanes = airplanes_number;
 
     for(i=0; i<airplanes_number; i+=1) {
         args[i].airplane_id = i+1;
