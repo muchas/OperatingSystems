@@ -5,8 +5,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
-#define FLYING_TIME 8
-#define STOP_TIME 5
+#define FLYING_TIME 3
+#define STOP_TIME 2
 
 
 typedef struct ThreadArgs {
@@ -102,6 +102,8 @@ void start(int airplane_id)
     is_airstrip_available = true;
     release_airstrip();
 
+    printf("Airplane %d is flying\n", airplane_id);
+
     mutex_unlock(&monitor_mutex);
 }
 
@@ -135,19 +137,19 @@ void land(int airplane_id)
     is_airstrip_available = true;
     release_airstrip();
 
+    printf("Airplane %d is waiting in dock\n", airplane_id);
+
     mutex_unlock(&monitor_mutex);
 }
 
 
 void fly(int airplane_id)
 {
-    printf("Airplane %d is flying\n", airplane_id);
     sleep(rand() % FLYING_TIME);
 }
 
 void stop(int airplane_id)
 {
-    printf("Airplane %d is waiting in dock\n", airplane_id);
     sleep(rand() % STOP_TIME);
 }
 
