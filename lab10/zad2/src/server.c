@@ -115,6 +115,9 @@ int register_client(int socket_fd, fd_set *set)
 
     FD_SET(client_fd, set);
 
+    printf("New client registered (fd: %d)\n", client_fd);
+
+    return client_fd;
 error:
     return -1;
 }
@@ -122,12 +125,16 @@ error:
 
 int read_message(int sender_fd, char *buffer)
 {
+    printf("Reading message from client (fd: %d)\n", sender_fd);
+
     return read(sender_fd, buffer, sizeof(buffer));
 }
 
 
 int send_message(int receiver_fd, char *message)
 {
+    printf("Sending message to client (fd: %d)\n", receiver_fd);
+
     return write(receiver_fd, message, sizeof(message));
 }
 
@@ -135,6 +142,8 @@ int send_message(int receiver_fd, char *message)
 void broadcast_message(int sender_fd, char *message, server_t *server)
 {
     int fd;
+
+    printf("Broadcasting message from client (fd %d)\n", sender_fd);
 
     for(fd=0; fd<server->highest_fd; fd+=1) {
         if(fd != sender_fd && fd != server->local_socket_fd && fd != server->remote_socket_fd) {
@@ -175,6 +184,8 @@ bool close_client_connection(server_t *server, int client_fd)
     if(server->highest_fd == client_fd) {
         server->highest_fd -= 1;
     }
+
+    printf("Client (fd: %d) closed.\n", client_fd);
 
     return true;
 
@@ -221,7 +232,7 @@ bool run_server(server_t *server)
     int client_fd, read_bytes;
     char message_buffer[MESSAGE_MAX_LIMIT];
 
-    printf("Server is running\n");
+    printf("Server is running!\n");
 
     while(true) {
         client_fd = wait_for_client(server);
