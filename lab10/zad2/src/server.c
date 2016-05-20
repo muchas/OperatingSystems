@@ -25,7 +25,6 @@ typedef struct Server {
 } server_t;
 
 
-
 void setup_local_address(char *socket_name, struct sockaddr_un *address)
 {
     unlink(socket_name);
@@ -126,16 +125,14 @@ error:
 int read_message(int sender_fd, char *buffer)
 {
     printf("Reading message from client (fd: %d)\n", sender_fd);
-
-    return read(sender_fd, buffer, sizeof(buffer));
+    return read(sender_fd, buffer, MESSAGE_MAX_LIMIT);
 }
 
 
 int send_message(int receiver_fd, char *message)
 {
     printf("Sending message to client (fd: %d)\n", receiver_fd);
-
-    return write(receiver_fd, message, sizeof(message));
+    return write(receiver_fd, message, MESSAGE_MAX_LIMIT);
 }
 
 
@@ -143,50 +140,28 @@ void broadcast_message(int sender_fd, char *message, server_t *server)
 {
     int fd;
 
-    printf("Broadcasting message from client (fd %d)\n", sender_fd);
+    printf("Broadcasting message from client (fd %d), message: %s\n", sender_fd, message);
 
-    for(fd=0; fd<server->highest_fd; fd+=1) {
-        if(fd != sender_fd && fd != server->local_socket_fd && fd != server->remote_socket_fd) {
+    for(fd=0; fd<=server->highest_fd; fd+=1) {
+        if(FD_ISSET(fd, &server->file_descriptors) && fd != sender_fd &&
+                fd != server->local_socket_fd && fd != server->remote_socket_fd) {
             send_message(fd, message);
         }
     }
 }
 
 
-bool set_timeout(int client_fd, int seconds)
-{
-    struct timeval timeout;
-    int result;
-
-    timeout.tv_sec = seconds;
-    timeout.tv_usec = 0;
-
-    result = setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
-    check(result >= 0, "setsockopt failed \n");
-
-    return true;
-
-error:
-    return false;
-}
-
-
-bool has_read_timeout(int read_bytes) {
-    return (read_bytes == -1 && errno == EWOULDBLOCK);
-}
-
-
 bool close_client_connection(server_t *server, int client_fd)
 {
-    check(close(client_fd), "Client closing error\n");
-    FD_CLR(client_fd, &server->file_descriptors);
+    printf("Closing %d...\n", client_fd);
+    check(close(client_fd) >= 0, "Client closing error\n");
 
+    FD_CLR(client_fd, &server->file_descriptors);
     if(server->highest_fd == client_fd) {
         server->highest_fd -= 1;
     }
-
+    
     printf("Client (fd: %d) closed.\n", client_fd);
-
     return true;
 
 error:
@@ -204,7 +179,7 @@ int wait_for_client(server_t *server)
         result = select(server->highest_fd+1, &read_set, NULL, NULL, NULL); // nfds, readfds, writefds, exceptfds, timeout
         check(result >= 0, "Select failed\n");
 
-        for(fd=0; fd<server->highest_fd; fd+=1) {
+        for(fd=0; fd<=server->highest_fd; fd+=1) {
             if(FD_ISSET(fd, &read_set)) {
                 if(fd == server->local_socket_fd) {
                     client_fd = register_client(server->local_socket_fd, &server->file_descriptors);
@@ -217,7 +192,6 @@ int wait_for_client(server_t *server)
                 check(client_fd, "Client registration failed");
 
                 server->highest_fd = max(server->highest_fd, client_fd);
-                set_timeout(client_fd, 10);
             }
         }
     }
@@ -227,7 +201,7 @@ error:
 }
 
 
-bool run_server(server_t *server)
+void run_server(server_t *server)
 {
     int client_fd, read_bytes;
     char message_buffer[MESSAGE_MAX_LIMIT];
@@ -238,18 +212,12 @@ bool run_server(server_t *server)
         client_fd = wait_for_client(server);
         read_bytes = read_message(client_fd, message_buffer);
 
-        if(has_read_timeout(read_bytes)) {
-            close_client_connection(server, client_fd);
-        } else if(read_bytes >= 0) {
-            set_timeout(client_fd, 0);  // client sent the message, cancel timeout
+        if(read_bytes > 0) {
             broadcast_message(client_fd, message_buffer, server);
         } else {
-            check(read_bytes, "Could not read the message\n");
+            close_client_connection(server, client_fd);
         }
     }
-
-error:
-    return false;
 }
 
 
