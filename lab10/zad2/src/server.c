@@ -36,7 +36,7 @@ void setup_local_address(char *socket_name, struct sockaddr_un *address)
 void setup_remote_address(in_port_t port, struct sockaddr_in *address)
 {
     address->sin_family = AF_INET;
-    address->sin_port = port;
+    address->sin_port = htons(port);
     address->sin_addr.s_addr = htonl(INADDR_ANY);
 }
 
@@ -160,7 +160,7 @@ bool close_client_connection(server_t *server, int client_fd)
     if(server->highest_fd == client_fd) {
         server->highest_fd -= 1;
     }
-    
+
     printf("Client (fd: %d) closed.\n", client_fd);
     return true;
 
@@ -225,14 +225,10 @@ int parse_int(char* arg)
 {
     long number;
     char *error;
-
     number = strtol(arg, &error, 10);
-
     check(strlen(error) == 0, "Argument %s is not a number.\n", arg);
     check(number < INT_MAX, "Argument %s has exceeded integer limit.\n", arg);
-
     return (int)number;
-
 error:
     exit(EXIT_FAILURE);
 }
