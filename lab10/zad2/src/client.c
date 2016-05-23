@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <signal.h>
 #include <netinet/in.h>
 #include <netinet/ip.h> /* superset of previous */
 #include "dbg.h"
@@ -189,9 +190,18 @@ void *reader(void *parameters)
 }
 
 
+void exit_handler()
+{
+    if(connection != NULL) close(connection->socket_fd);
+    exit(EXIT_SUCCESS);
+}
+
+
 int main(int argc, char *argv[])
 {
     pthread_t writer_id, reader_id;
+
+    signal(SIGINT, exit_handler);
 
     if(argc == 4 && strcmp(argv[2], "local") == 0) {
         connection = (connection_t *) open_local_connection(argv[1], argv[3]);

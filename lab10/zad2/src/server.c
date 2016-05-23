@@ -11,6 +11,8 @@
 #include <netinet/ip.h> /* superset of previous */
 #include "dbg.h"
 #define MESSAGE_MAX_LIMIT 256
+#define FD_MAX_LIMIT 40
+#define CLIENT_TIMEOUT 10
 int max (int a, int b) { return a > b ? a : b; }
 
 
@@ -26,7 +28,8 @@ typedef struct Server {
 } server_t;
 
 
-static server_t *server; // global because of at exit handler
+static server_t *server; // global due to exit handler
+static time_t client_timestamps[FD_MAX_LIMIT];
 
 
 void setup_local_address(char *socket_name, struct sockaddr_un *address)
@@ -130,6 +133,13 @@ int register_client(int socket_fd, fd_set *set)
 
     FD_SET(client_fd, set);
 
+    if(client_fd > FD_MAX_LIMIT) {
+        printf("FD_MAX_LIMIT exceeded \n");
+        return -1;
+    }
+
+    client_timestamps[client_fd] = time(NULL);
+
     printf("New client registered (fd: %d)\n", client_fd);
 
     return client_fd;
@@ -185,14 +195,35 @@ error:
 }
 
 
+void close_inactive_clients(server_t* server){
+    int i;
+    time_t timestamp = time(NULL);
+
+    for (i=0; i<=server->highest_fd; i++){
+        if(FD_ISSET(i, &server->file_descriptors) && server->local_socket_fd != i &&
+                server->remote_socket_fd != i && client_timestamps[i]+CLIENT_TIMEOUT < timestamp){
+            printf("Closing client (fd: %d) - timeout occurred.\n", i);
+            close_client_connection(server, i);
+        }
+    }
+}
+
+
 int wait_for_client(server_t *server)
 {
     int result, fd, client_fd;
     fd_set read_set;
+    struct timeval tiv;
+
+    tiv.tv_sec = 1;
+    tiv.tv_usec = 0;
 
     while(true) {
+        close_inactive_clients(server);
+
         read_set = server->file_descriptors;
-        result = select(server->highest_fd+1, &read_set, NULL, NULL, NULL); // nfds, readfds, writefds, exceptfds, timeout
+
+        result = select(server->highest_fd+1, &read_set, NULL, NULL, &tiv); // nfds, readfds, writefds, exceptfds, timeout
         check(result >= 0, "Select failed\n");
 
         for(fd=0; fd<=server->highest_fd; fd+=1) {
