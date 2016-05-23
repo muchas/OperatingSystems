@@ -160,6 +160,7 @@ void *writer(void *parameters)
     }
 
     return NULL;
+
 error:
     return NULL;
 }

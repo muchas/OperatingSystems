@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <signal.h>
 #include <netinet/in.h>
 #include <netinet/ip.h> /* superset of previous */
 #include "dbg.h"
@@ -23,6 +24,9 @@ typedef struct Server {
 
     fd_set file_descriptors;
 } server_t;
+
+
+static server_t *server; // global because of at exit handler
 
 
 void setup_local_address(char *socket_name, struct sockaddr_un *address)
@@ -99,6 +103,18 @@ server_t *open_server(char *socket_name, int port)
 
 void close_server(server_t *server)
 {
+    int fd;
+
+    for(fd=0; fd<=server->highest_fd; fd+=1) {
+        if(FD_ISSET(fd, &server->file_descriptors)) {
+            shutdown(fd, SHUT_RDWR);
+
+            if(close(fd) < 0) {
+                perror("Server closing error");
+            }
+        }
+    }
+
     free(server->local_address);
     free(server->remote_address);
     free(server);
@@ -234,17 +250,25 @@ error:
 }
 
 
+void exit_handler(int sig)
+{
+    if(server != NULL) close_server(server);
+    exit(EXIT_SUCCESS);
+}
+
+
 int main(int argc, char* argv[])
 {
     int port;
     char *socket_pathname;
     bool is_valid;
-    server_t *server;
 
     check(argc == 3, "Invalid number of arguments. Usage: <port> <socket pathname>\n");
 
     port = parse_int(argv[1]);
     socket_pathname = strdup(argv[2]);
+
+    if(signal(SIGINT, exit_handler) < 0) exit(EXIT_FAILURE);
 
     server = open_server(socket_pathname, port);
     run_server(server);
