@@ -10,7 +10,7 @@
 #include <netinet/ip.h> /* superset of previous */
 #include "dbg.h"
 #define MESSAGE_MAX_LIMIT 256
-inline int max (int a, int b) { return a > b ? a : b; }
+int max (int a, int b) { return a > b ? a : b; }
 
 
 typedef struct Server {

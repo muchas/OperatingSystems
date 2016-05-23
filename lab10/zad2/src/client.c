@@ -46,7 +46,10 @@ int initialize_connection(int socket_family, struct sockaddr* address, int size)
 
     while(connect(socket_fd, address, size) == -1) {
         if(errno == ENOENT) sleep(1);
-        else return -1;
+        else {
+            perror("Connection error\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     return socket_fd;
@@ -81,10 +84,15 @@ void setup_remote_address(char *ip, int port, struct sockaddr_in *address)
     int result;
     address->sin_family = AF_INET;
     address->sin_port = htons(port);
-    result = inet_pton(AF_INET, ip, address->sin_addr);
-    check(result > 0, "invalid ip address");
-error:
-    exit(EXIT_FAILURE);
+    result = inet_pton(AF_INET, ip, &address->sin_addr);
+
+    if(result == 0) {
+        perror("invalid ip address\n");
+        exit(EXIT_FAILURE);
+    } else if(result == -1) {
+        perror("inet_pton error\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -106,6 +114,7 @@ remote_connection_t *open_remote_connection(char *username, char *ip, int port)
     remote_connection_t *connection;
     connection = malloc(sizeof(local_connection_t));
     connection->address = malloc(sizeof(struct sockaddr_in));
+    strcpy(connection->username, username);
 
     setup_remote_address(ip, port, connection->address);
     connection->socket_fd = initialize_remote_connection(connection->address);
