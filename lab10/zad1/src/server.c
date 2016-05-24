@@ -29,10 +29,10 @@ typedef struct server {
 } server_t;
 
 typedef struct client_timeout{
-    int fd;
+    char* nickname;
     time_t timestamp;
-    struct sockaddr* sa;
-    socklen_t *sa_len;
+    struct sockaddr sa;
+    socklen_t sa_len;
 } client_timeout_t;
 
 
@@ -41,8 +41,21 @@ int max (int a, int b) {
 }
 
 
-static client_timeout_t clients[CLIENT_MAX_NUM];
+static client_timeout_t client_timestamps[CLIENT_MAX_NUM];
 static int client_num=0;
+
+char* parse_message(char* message){
+    char* end_ptr=strchr(message, '}');
+
+    int len=end_ptr-(message+1);
+    char* nickname = malloc(sizeof(char)*(len+1));
+    int i;
+    for(i=0; i<len; i++){
+        nickname[i]=message[i+1];
+    }
+    nickname[i]='\0';
+    return nickname;
+}
 
 void setup_local_address(char *socket_name, struct sockaddr_un *address)
 {
@@ -111,46 +124,24 @@ void close_server(server_t *server)
 }
 
 
-int register_client(int socket_fd, fd_set *set)
-{
-    int client_fd;
 
-    client_fd = accept(socket_fd, NULL, 0);
-    if(client_fd < 0){
-        fprintf(stderr, "Client acceptance failed\n");
-        exit(1);
-    }
-
-    FD_SET(client_fd, set);
-
-    printf("New client registered (fd: %d)\n", client_fd);
-
-
-    client_timeout_t client_timeout;
-    client_timeout.fd=client_fd;
-    client_timeout.timestamp=time(NULL);
-    clients[client_num]=client_timeout;
-    client_num += 1;
-
-    return client_fd;
-}
-
-
-
-void update_client_timeout(int client_fd){
+void update_client_timeout(char* nickname){
     int i;
     for(i=0; i<client_num; i++){
-        if(clients[i].fd==client_fd){
-            clients[i].timestamp=time(NULL);
+        if(strcmp(client_timestamps[i].nickname, nickname)==0){
+            client_timestamps[i].timestamp=time(NULL);
         }
     }
 }
 
 int read_message(int sender_fd, char *buffer, struct sockaddr* sa, socklen_t *sa_len)
 {
-    update_client_timeout(sender_fd);
     printf("Reading message from fd - %d\n", sender_fd);
-    return recvfrom(sender_fd, buffer, MESSAGE_MAX_LIMIT, 0, sa, sa_len);
+    int len=recvfrom(sender_fd, buffer, MESSAGE_MAX_LIMIT, 0, sa, sa_len);
+    char* nickname = parse_message(buffer);
+    update_client_timeout(nickname);
+    free(nickname);
+    return len;
 }
 
 
@@ -167,52 +158,60 @@ void broadcast_message(int sender_fd, char *message, server_t *server)
 
     printf("Broadcasting message from fd - %d, message: %s\n", sender_fd, message);
 
-//    for(fd=0; fd<=server->highest_fd; fd+=1) {
-//        if(FD_ISSET(fd, &server->file_descriptors) && fd != sender_fd &&
-//           fd != server->local_socket_fd && fd != server->remote_socket_fd) {
-//            send_message(fd, message);
-//        }
-//    }
+    int i;
+    for (i=0; i<client_num; i++){
+        if(sendto(sender_fd, message, MESSAGE_MAX_LIMIT, 0, &client_timestamps[i].sa, client_timestamps[i].sa_len)<0){
+            perror("send error");
+        }
+    }
 }
 
 
-bool close_client_connection(server_t *server, int client_fd)
-{
-    printf("Closing %d...\n", client_fd);
-    if(close(client_fd) < 0){
-        perror("Client closing error\n");
-        exit(1);
-    }
 
-    FD_CLR(client_fd, &server->file_descriptors);
-    if(server->highest_fd == client_fd) {
-        server->highest_fd -= 1;
-    }
 
-    printf("Client (fd: %d) closed.\n", client_fd);
-    return true;
-
-}
-
-bool close_client_timeout(server_t* server, int client_fd){
+void close_client_timeout(server_t* server){
     time_t timestamp = time(NULL);
     int i,j;
-    bool result=false;
     for (i=0; i<client_num; i++){
-        if(clients[i].timestamp+CLIENT_TIMEOUT<timestamp){
-            printf("Closing fd %d, due to timeout \n", clients[i].fd);
-            close_client_connection(server, clients[i].fd);
-            if(client_fd==clients[i].fd) result=true;
+        if(client_timestamps[i].timestamp+CLIENT_TIMEOUT<timestamp){
+            printf("Closing %s, due to timeout \n", client_timestamps[i].nickname);
             client_num -= 1;
             for(j=i; j<client_num; j++){
-                clients[j]=clients[j+1];
+                client_timestamps[j]=client_timestamps[j+1];
             }
         }
     }
-    return result;
 }
 
 
+
+
+
+bool is_client_registered(char* message){
+    char* nickname = parse_message(message);
+    int i;
+    for (i=0; i<client_num; i++){
+        if (strcmp(nickname, client_timestamps[i].nickname)==0){
+            return true;
+        }
+    }
+    return false;
+}
+
+void register_client(char* message, struct sockaddr sa, socklen_t sa_len){
+    char* nickname = parse_message(message);
+    printf("New client registered (Nickname: %s)\n", nickname);
+
+
+    client_timeout_t client_timeout;
+    client_timeout.nickname=nickname;
+    client_timeout.timestamp=time(NULL);
+    client_timeout.sa = sa;
+    client_timeout.sa_len = sa_len;
+    client_timestamps[client_num]=client_timeout;
+    client_num += 1;
+
+}
 
 void run(server_t *server)
 {
@@ -226,11 +225,11 @@ void run(server_t *server)
     tiv.tv_usec = 0;
 
     printf("Server started\n");
-    struct sockaddr_storage sa;
+    struct sockaddr sa;
     socklen_t sa_len=sizeof(sa);
 
     while(true) {
-        close_client_timeout(server, 0);
+        close_client_timeout(server);
 
         read_set = server->file_descriptors;
         result = select(server->highest_fd+1, &read_set, NULL, NULL, &tiv);
@@ -241,10 +240,10 @@ void run(server_t *server)
 
         if(FD_ISSET(server->local_socket_fd, &read_set)){
             read_bytes = read_message(server->local_socket_fd, message_buffer, (struct sockaddr*)&sa, &sa_len);
-            if(sendto(server->local_socket_fd, "HI", strlen("HI"), 0, (struct sockaddr*)&sa, sa_len)<0){
-                perror("send error2");
-                printf("%d", sa_len);
+            if(!is_client_registered(message_buffer)){
+                register_client(message_buffer, sa, sa_len);
             }
+
             if(read_bytes > 0) {
                 broadcast_message(server->local_socket_fd, message_buffer, server);
             } else {
@@ -254,9 +253,8 @@ void run(server_t *server)
 
         if(FD_ISSET(server->remote_socket_fd, &read_set)){
             read_bytes = read_message(server->remote_socket_fd, message_buffer, (struct sockaddr*)&sa, &sa_len);
-            if(sendto(server->remote_socket_fd, "HI", strlen("HI"), 0, (struct sockaddr*)&sa, sa_len)<0){
-                perror("send error");
-                printf("%d", sa_len);
+            if(!is_client_registered(message_buffer)){
+                register_client(message_buffer, sa, sa_len);
             }
 
             if(read_bytes > 0) {

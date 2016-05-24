@@ -40,6 +40,8 @@ typedef struct RemoteConnection {
 
 static connection_t *connection;
 static char* username;
+static int struct_size;
+static int fd;
 
 
 
@@ -115,17 +117,11 @@ void *writer(void *parameters)
         FD_ZERO(&set);
         FD_SET(connection->socket_fd, &set);
 
-        if( select(connection->socket_fd+1, &set, NULL, NULL, NULL) < 0){
-            perror("select failed");
-            exit(1);
-        }
 
-        if(FD_ISSET(connection->socket_fd, &set)) {
-            if(read(connection->socket_fd, &buffer, MESSAGE_MAX_LIMIT) > 0) {
-                fflush(stdout);
-                printf("%s", buffer);
-                fflush(stdout);
-            }
+        if(read(fd, &buffer, MESSAGE_MAX_LIMIT) > 0) {
+            fflush(stdout);
+            printf("%s", buffer);
+            fflush(stdout);
         }
     }
 
@@ -140,15 +136,23 @@ void *reader(void *parameters)
     char buffer[MESSAGE_MAX_LIMIT];
 
     current_index = 0;
-
+    char buffer2[MESSAGE_MAX_LIMIT];
     while(true) {
         buffer[current_index++] = getchar();
 
         if(buffer[current_index - 1] == '\n') {
             if(current_index != 1) {
-                send_message(connection, buffer);
-                printf("{%s}: %.*s\n", connection->username, current_index-1, buffer);
+                //printf("{%s}: %.*s\n", connection->username, current_index-1, buffer);
+
+                strcpy(buffer2, "{");
+                strcat(buffer2, connection->username);
+                strcat(buffer2, "}: ");
+                strcat(buffer2, buffer);
+                if(sendto(fd, buffer2, MESSAGE_MAX_LIMIT, 0, connection->address, struct_size)<0){
+                    perror("Sendto error");
+                }
                 memset(buffer, 0, sizeof(buffer));
+                memset(buffer2, 0, sizeof(buffer2));
             }
             current_index = 0;
         }
@@ -206,9 +210,11 @@ int main(int argc, char *argv[])
     if(argc == 4 && strcmp(argv[2], "local") == 0) {
         socket_fd = create_socket_local(argv[1]);
         connection = (connection_t *) open_local_connection(argv[1], argv[3]);
+        struct_size = sizeof(struct sockaddr_un);
     } else if(argc == 5 && strcmp(argv[2], "remote") == 0){
         socket_fd = create_socket_remote(atoi(argv[4]));
         connection = (connection_t *) open_remote_connection(argv[1], argv[3], atoi(argv[4]));
+        struct_size = sizeof(struct sockaddr_in);
     }
 
     else {
@@ -216,12 +222,13 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-//    if(sendto(socket_fd, "Hello world", strlen("Hello world"), 0, connection->address, sizeof(struct sockaddr_in))<0){
+//    if(sendto(socket_fd, "Hello world", strlen("Hello world"), 0, connection->address, struct_size)<0){
 //        perror("Sendto error");
 //    }
-//    char buffer[MESSAGE_MAX_LIMIT];
-//    recvfrom(socket_fd, buffer, MESSAGE_MAX_LIMIT, 0, NULL, NULL);
-//    printf("%s", buffer);
+    //char buffer[MESSAGE_MAX_LIMIT];
+    //recvfrom(socket_fd, buffer, MESSAGE_MAX_LIMIT, 0, NULL, NULL);
+    //printf("%s", buffer);
+    fd=socket_fd;
 
     if( pthread_create(&writer_id, NULL, writer, NULL) < 0){
         printf("thread creation failed\n");
