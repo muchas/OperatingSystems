@@ -16,6 +16,7 @@
 #define CLIENT_MAX_NUM 100
 #define CLIENT_TIMEOUT 10
 
+enum client_type_t {LOCAL, REMOTE};
 
 typedef struct server {
     int remote_socket_fd;
@@ -33,6 +34,7 @@ typedef struct client_timeout{
     time_t timestamp;
     struct sockaddr sa;
     socklen_t sa_len;
+    client_type_t type;
 } client_timeout_t;
 
 
@@ -160,9 +162,16 @@ void broadcast_message(int sender_fd, char *message, server_t *server)
 
     int i;
     for (i=0; i<client_num; i++){
-        if(sendto(sender_fd, message, MESSAGE_MAX_LIMIT, 0, &client_timestamps[i].sa, client_timestamps[i].sa_len)<0){
-            perror("send error");
+        if(client_timestamps[i].type == LOCAL) {
+            if(sendto(server->local_socket_fd, message, MESSAGE_MAX_LIMIT, 0, &client_timestamps[i].sa, client_timestamps[i].sa_len)<0){
+                perror("send error");
+            }
+        } else {
+            if(sendto(server->remote_socket_fd, message, MESSAGE_MAX_LIMIT, 0, &client_timestamps[i].sa, client_timestamps[i].sa_len)<0){
+                perror("send error");
+            }
         }
+
     }
 }
 
@@ -198,7 +207,7 @@ bool is_client_registered(char* message){
     return false;
 }
 
-void register_client(char* message, struct sockaddr sa, socklen_t sa_len){
+void register_client(char* message, struct sockaddr sa, socklen_t sa_len, client_type_t type){
     char* nickname = parse_message(message);
     printf("New client registered (Nickname: %s)\n", nickname);
 
@@ -207,6 +216,7 @@ void register_client(char* message, struct sockaddr sa, socklen_t sa_len){
     client_timeout.nickname=nickname;
     client_timeout.timestamp=time(NULL);
     client_timeout.sa = sa;
+    client_timeout.type = type;
     client_timeout.sa_len = sa_len;
     client_timestamps[client_num]=client_timeout;
     client_num += 1;
@@ -241,7 +251,7 @@ void run(server_t *server)
         if(FD_ISSET(server->local_socket_fd, &read_set)){
             read_bytes = read_message(server->local_socket_fd, message_buffer, (struct sockaddr*)&sa, &sa_len);
             if(!is_client_registered(message_buffer)){
-                register_client(message_buffer, sa, sa_len);
+                register_client(message_buffer, sa, sa_len, LOCAL);
             }
 
             if(read_bytes > 0) {
@@ -254,7 +264,7 @@ void run(server_t *server)
         if(FD_ISSET(server->remote_socket_fd, &read_set)){
             read_bytes = read_message(server->remote_socket_fd, message_buffer, (struct sockaddr*)&sa, &sa_len);
             if(!is_client_registered(message_buffer)){
-                register_client(message_buffer, sa, sa_len);
+                register_client(message_buffer, sa, sa_len, REMOTE);
             }
 
             if(read_bytes > 0) {
