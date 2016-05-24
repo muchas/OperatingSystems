@@ -29,7 +29,7 @@ typedef struct Server {
 
 
 static server_t *server; // global due to exit handler
-static time_t client_timestamps[FD_MAX_LIMIT];
+static time_t client[FD_MAX_LIMIT];
 
 
 void setup_local_address(char *socket_name, struct sockaddr_un *address)
@@ -138,7 +138,7 @@ int register_client(int socket_fd, fd_set *set)
         return -1;
     }
 
-    client_timestamps[client_fd] = time(NULL);
+    client[client_fd] = time(NULL);
 
     printf("New client registered (fd: %d)\n", client_fd);
 
@@ -150,6 +150,7 @@ error:
 
 int read_message(int sender_fd, char *buffer)
 {
+    client[sender_fd] += 2000;
     printf("Reading message from client (fd: %d)\n", sender_fd);
     return read(sender_fd, buffer, MESSAGE_MAX_LIMIT);
 }
@@ -201,7 +202,7 @@ void close_inactive_clients(server_t* server){
 
     for (i=0; i<=server->highest_fd; i++){
         if(FD_ISSET(i, &server->file_descriptors) && server->local_socket_fd != i &&
-                server->remote_socket_fd != i && client_timestamps[i]+CLIENT_TIMEOUT < timestamp){
+                server->remote_socket_fd != i && client[i]+CLIENT_TIMEOUT < timestamp){
             printf("Closing client (fd: %d) - timeout occurred.\n", i);
             close_client_connection(server, i);
         }
