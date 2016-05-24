@@ -156,6 +156,8 @@ void *writer(void *parameters)
                 fflush(stdout);
                 printf("%s", buffer);
                 fflush(stdout);
+            } else {
+                exit(0);
             }
         }
     }
